@@ -167,13 +167,18 @@ jobs:
           sha256sum WearyStars-bangkk.zip \
             > WearyStars-bangkk.zip.sha256
 
-      - name: Upload artifacts
+                  - name: Upload Kernel ZIP
         uses: actions/upload-artifact@v4
         with:
           name: WearyStars-bangkk
-          path: |
-            WearyStars-bangkk.zip
-            WearyStars-bangkk.zip.sha256
+          path: WearyStars-bangkk.zip
           if-no-files-found: error
           retention-days: 14
-          
+
+      - name: Upload SHA256
+        uses: actions/upload-artifact@v4
+        with:
+          name: WearyStars-bangkk-SHA256
+          path: WearyStars-bangkk.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
