@@ -10,11 +10,11 @@ permissions:
 jobs:
   build:
     name: WearyStars - bangkk
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
 
     env:
       KBUILD_BUILD_USER: bangkkuser
-      KBUILD_BUILD_HOST: ubuntu_22.04_actions
+      KBUILD_BUILD_HOST: ubuntu_24.04_actions
       ARCH: arm64
       SUBARCH: arm64
       CROSS_COMPILE: aarch64-linux-gnu-
