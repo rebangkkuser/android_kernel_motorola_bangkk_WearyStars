@@ -38,9 +38,10 @@ jobs:
             libelf-dev libssl-dev libncurses-dev \
             python3 python-is-python3 \
             rsync unzip zip zstd \
-            device-tree-compiler dwarves libxml2 \
+            device-tree-compiler dwarves \
             gcc-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabi
+            gcc-arm-linux-gnueabi \
+            libxml2
 
       - name: Install Neutron Clang 18
         run: |
@@ -54,7 +55,6 @@ jobs:
             -o antman
 
           chmod +x antman
-
           ./antman -S=05012024
 
           echo "$RUNNER_TEMP/neutron-clang/bin" >> "$GITHUB_PATH"
@@ -79,6 +79,7 @@ jobs:
       - name: Verify KernelSU
         run: |
           set -e
+
           test -f KernelSU/kernel/Kconfig
           echo "KernelSU encontrado!"
           git -C KernelSU rev-parse HEAD
@@ -153,8 +154,20 @@ jobs:
             rm -rf AnyKernel3/vendor_ramdisk
           fi
 
+      - name: Validate AnyKernel3
+        run: |
+          set -e
+
+          test -f AnyKernel3/anykernel.sh
+          test -f AnyKernel3/Image.gz
+
+          echo "AnyKernel3 validado:"
+          ls -lh AnyKernel3/Image.gz
+          ls -lh AnyKernel3/anykernel.sh
+
       - name: Create AnyKernel3 ZIP
         run: |
+          set -e
           cd AnyKernel3
 
           zip -r9 \
@@ -162,18 +175,8 @@ jobs:
             -x "*.git*" \
             -x "README.md"
 
-      - name: Generate SHA256
-        run: |
-          sha256sum WearyStars-bangkk.zip \
-            > WearyStars-bangkk.zip.sha256
-
-                  - name: Upload Kernel ZIP
-        uses: actions/upload-artifact@v4
-        with:
-          name: WearyStars-bangkk
-          path: WearyStars-bangkk.zip
-          if-no-files-found: error
-          retention-days: 14
+          cd "$GITHUB_WORKSPACE"
+          unzip -t WearyStars-bangkk.zip
 
       - name: Generate SHA256
         run: |
