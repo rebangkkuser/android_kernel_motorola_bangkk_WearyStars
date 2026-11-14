@@ -1,0 +1,128 @@
+
+name: WearyStars Kernel Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build WearyStars - bangkk
+    runs-on: ubuntu-22.04
+
+    env:
+      KBUILD_BUILD_USER: bangkkuser
+      KBUILD_BUILD_HOST: ubuntu_22.04_actions
+      ARCH: arm64
+      SUBARCH: arm64
+      LLVM: "-22"
+      CROSS_COMPILE: aarch64-linux-gnu-
+      CROSS_COMPILE_ARM32: arm-linux-gnueabi-
+
+    steps:
+      - name: Checkout kernel
+        uses: actions/checkout@v4
+        with:
+          repository: Samw662/android_kernel_motorola_bangkk
+          ref: master
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git curl wget ca-certificates gnupg lsb-release \
+            bc bison flex build-essential \
+            cpio zip unzip rsync \
+            python3 python-is-python3 \
+            libssl-dev libelf-dev \
+            dwarves device-tree-compiler \
+            gcc-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabi
+
+      - name: Install LLVM 22
+        run: |
+          wget -qO LLVM.sh https://apt.llvm.org/llvm.sh
+          chmod +x LLVM.sh
+          sudo ./LLVM.sh 22
+
+          clang-22 --version
+          ld.lld-22 --version
+
+      - name: Clone AnyKernel3
+        run: |
+          git clone --depth=1 \
+            -b bangkk \
+            https://github.com/Samw662/AnyKernel3.git \
+            AnyKernel3
+
+      - name: Configure kernel
+        run: |
+          make O=out vendor/bangkk_defconfig
+
+          scripts/config --file out/.config \
+            --set-str LOCALVERSION "-WearyStars⭐"
+
+          make O=out olddefconfig
+
+          echo "Kernel release:"
+          make O=out -s kernelrelease
+
+      - name: Compile kernel
+        run: |
+          make -j"$(nproc)" O=out \
+            LLVM="${LLVM}" \
+            ARCH="${ARCH}" \
+            CROSS_COMPILE="${CROSS_COMPILE}" \
+            CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" \
+            Image.gz dtbs modules
+
+      - name: Prepare AnyKernel3
+        run: |
+          set -e
+
+          IMAGE="out/arch/arm64/boot/Image.gz"
+          test -f "$IMAGE"
+
+          cp "$IMAGE" AnyKernel3/Image.gz
+
+          make -j"$(nproc)" O=out \
+            LLVM="${LLVM}" \
+            ARCH="${ARCH}" \
+            CROSS_COMPILE="${CROSS_COMPILE}" \
+            CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" \
+            INSTALL_MOD_PATH="$GITHUB_WORKSPACE/AnyKernel3/vendor_ramdisk" \
+            INSTALL_MOD_STRIP=1 \
+            modules_install
+
+          if ! find AnyKernel3/vendor_ramdisk \
+            -type f -name '*.ko' -print -quit | grep -q .; then
+            rm -rf AnyKernel3/vendor_ramdisk
+          fi
+
+      - name: Create AnyKernel3 ZIP
+        run: |
+          cd AnyKernel3
+
+          zip -r9 \
+            "$GITHUB_WORKSPACE/WearyStars-bangkk.zip" . \
+            -x "*.git*" \
+            -x "README.md"
+
+      - name: Generate SHA256
+        run: |
+          sha256sum WearyStars-bangkk.zip \
+            > WearyStars-bangkk.zip.sha256
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: WearyStars-bangkk
+          path: |
+            WearyStars-bangkk.zip
+            WearyStars-bangkk.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+          
