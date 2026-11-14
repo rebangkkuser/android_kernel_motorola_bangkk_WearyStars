@@ -14,10 +14,9 @@ jobs:
 
     env:
       KBUILD_BUILD_USER: bangkkuser
-      KBUILD_BUILD_HOST: ubuntu_26.04_actions
+      KBUILD_BUILD_HOST: ubuntu_22.04_actions
       ARCH: arm64
       SUBARCH: arm64
-      LLVM: "-22"
       CROSS_COMPILE: aarch64-linux-gnu-
       CROSS_COMPILE_ARM32: arm-linux-gnueabi-
 
@@ -38,32 +37,37 @@ jobs:
             curl flex git gnupg wget \
             libelf-dev libssl-dev libncurses-dev \
             python3 python-is-python3 \
-            rsync unzip zip \
+            rsync unzip zip zstd \
             device-tree-compiler dwarves \
             gcc-aarch64-linux-gnu \
             gcc-arm-linux-gnueabi
 
-      - name: Install LLVM 22
-        run: |
-          wget -qO LLVM.sh https://apt.llvm.org/llvm.sh
-          chmod +x LLVM.sh
-          sudo ./LLVM.sh 22
-
-          clang-22 --version
-          ld.lld-22 --version
-
-      - name: Configure LLVM aliases
+      - name: Install Neutron Clang 18
         run: |
           set -e
 
-          for tool in clang ld.lld llvm-ar llvm-nm \
-                      llvm-objcopy llvm-objdump llvm-strip; do
-            target="$(command -v "${tool}-22")"
-            sudo ln -sf "$target" "/usr/local/bin/$tool"
-          done
+          mkdir -p "$RUNNER_TEMP/neutron-clang"
+          cd "$RUNNER_TEMP/neutron-clang"
 
-          ld.lld --version
+          curl -fL \
+            https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman \
+            -o antman
+
+          chmod +x antman
+
+          ./antman -S=05012024
+
+          echo "$RUNNER_TEMP/neutron-clang/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Neutron Clang
+        run: |
+          set -e
+
           clang --version
+          ld.lld --version
+          llvm-ar --version
+
+          clang --version | grep -E '18\.0\.0'
 
       - name: Clone AnyKernel3
         run: |
@@ -74,29 +78,50 @@ jobs:
 
       - name: Verify KernelSU
         run: |
+          set -e
           test -f KernelSU/kernel/Kconfig
           echo "KernelSU encontrado!"
           git -C KernelSU rev-parse HEAD
 
       - name: Configure kernel
         run: |
-          make O=out vendor/bangkk_defconfig
+          set -e
+
+          make O=out \
+            CC=clang \
+            LD=ld.lld \
+            AR=llvm-ar \
+            NM=llvm-nm \
+            vendor/bangkk_defconfig
 
           scripts/config --file out/.config \
             --set-str LOCALVERSION "-WearyStars⭐"
 
-          make O=out olddefconfig
+          make O=out \
+            CC=clang \
+            LD=ld.lld \
+            AR=llvm-ar \
+            NM=llvm-nm \
+            olddefconfig
 
           echo "Kernel release:"
           make O=out -s kernelrelease
 
       - name: Compile kernel
         run: |
+          set -e
+
           make -j"$(nproc)" O=out \
-            LLVM="${LLVM}" \
-            ARCH="${ARCH}" \
-            CROSS_COMPILE="${CROSS_COMPILE}" \
-            CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" \
+            CC=clang \
+            LD=ld.lld \
+            AR=llvm-ar \
+            NM=llvm-nm \
+            OBJCOPY=llvm-objcopy \
+            OBJDUMP=llvm-objdump \
+            STRIP=llvm-strip \
+            ARCH=arm64 \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             Image.gz dtbs modules
 
       - name: Prepare AnyKernel3
@@ -109,10 +134,16 @@ jobs:
           cp "$IMAGE" AnyKernel3/Image.gz
 
           make -j"$(nproc)" O=out \
-            LLVM="${LLVM}" \
-            ARCH="${ARCH}" \
-            CROSS_COMPILE="${CROSS_COMPILE}" \
-            CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" \
+            CC=clang \
+            LD=ld.lld \
+            AR=llvm-ar \
+            NM=llvm-nm \
+            OBJCOPY=llvm-objcopy \
+            OBJDUMP=llvm-objdump \
+            STRIP=llvm-strip \
+            ARCH=arm64 \
+            CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             INSTALL_MOD_PATH="$GITHUB_WORKSPACE/AnyKernel3/vendor_ramdisk" \
             INSTALL_MOD_STRIP=1 \
             modules_install
