@@ -175,6 +175,19 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Generate SHA256
+        run: |
+          sha256sum WearyStars-bangkk.zip \
+            > WearyStars-bangkk.zip.sha256
+
+      - name: Upload Kernel ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: WearyStars-bangkk
+          path: WearyStars-bangkk.zip
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload SHA256
         uses: actions/upload-artifact@v4
         with:
@@ -182,3 +195,4 @@ jobs:
           path: WearyStars-bangkk.zip.sha256
           if-no-files-found: error
           retention-days: 14
+          
