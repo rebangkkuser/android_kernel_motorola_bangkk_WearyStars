@@ -51,6 +51,20 @@ jobs:
           clang-22 --version
           ld.lld-22 --version
 
+
+      - name: Configure LLVM 22 aliases
+        run: |
+          sudo ln -sf "$(command -v clang-22)" /usr/local/bin/clang
+          sudo ln -sf "$(command -v ld.lld-22)" /usr/local/bin/ld.lld
+          sudo ln -sf "$(command -v llvm-ar-22)" /usr/local/bin/llvm-ar
+          sudo ln -sf "$(command -v llvm-nm-22)" /usr/local/bin/llvm-nm
+          sudo ln -sf "$(command -v llvm-objcopy-22)" /usr/local/bin/llvm-objcopy
+          sudo ln -sf "$(command -v llvm-objdump-22)" /usr/local/bin/llvm-objdump
+          sudo ln -sf "$(command -v llvm-strip-22)" /usr/local/bin/llvm-strip
+
+          ld.lld --version
+          clang --version
+          
       - name: Clone AnyKernel3
         run: |
           git clone --depth=1 \
