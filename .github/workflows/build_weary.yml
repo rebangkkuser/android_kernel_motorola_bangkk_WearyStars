@@ -38,7 +38,7 @@ jobs:
             libelf-dev libssl-dev libncurses-dev \
             python3 python-is-python3 \
             rsync unzip zip zstd \
-            device-tree-compiler dwarves \
+            device-tree-compiler dwarves libxml2 \
             gcc-aarch64-linux-gnu \
             gcc-arm-linux-gnueabi
 
