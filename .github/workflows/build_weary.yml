@@ -9,12 +9,12 @@ permissions:
 
 jobs:
   build:
-    name: Build WearyStars - bangkk
-    runs-on: ubuntu-22.04
+    name: WearyStars - bangkk
+    runs-on: ubuntu-26.04
 
     env:
       KBUILD_BUILD_USER: bangkkuser
-      KBUILD_BUILD_HOST: ubuntu_22.04_actions
+      KBUILD_BUILD_HOST: ubuntu_26.04_actions
       ARCH: arm64
       SUBARCH: arm64
       LLVM: "-22"
@@ -22,23 +22,24 @@ jobs:
       CROSS_COMPILE_ARM32: arm-linux-gnueabi-
 
     steps:
-      - name: Checkout kernel
+      - name: Checkout kernel with submodules
         uses: actions/checkout@v4
         with:
           repository: Samw662/android_kernel_motorola_bangkk
           ref: master
           fetch-depth: 1
+          submodules: recursive
 
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git curl wget ca-certificates gnupg lsb-release \
-            bc bison flex build-essential \
-            cpio zip unzip rsync \
+            bc bison build-essential cpio \
+            curl flex git gnupg wget \
+            libelf-dev libssl-dev libncurses-dev \
             python3 python-is-python3 \
-            libssl-dev libelf-dev \
-            dwarves device-tree-compiler \
+            rsync unzip zip \
+            device-tree-compiler dwarves \
             gcc-aarch64-linux-gnu \
             gcc-arm-linux-gnueabi
 
@@ -51,26 +52,31 @@ jobs:
           clang-22 --version
           ld.lld-22 --version
 
-
-      - name: Configure LLVM 22 aliases
+      - name: Configure LLVM aliases
         run: |
-          sudo ln -sf "$(command -v clang-22)" /usr/local/bin/clang
-          sudo ln -sf "$(command -v ld.lld-22)" /usr/local/bin/ld.lld
-          sudo ln -sf "$(command -v llvm-ar-22)" /usr/local/bin/llvm-ar
-          sudo ln -sf "$(command -v llvm-nm-22)" /usr/local/bin/llvm-nm
-          sudo ln -sf "$(command -v llvm-objcopy-22)" /usr/local/bin/llvm-objcopy
-          sudo ln -sf "$(command -v llvm-objdump-22)" /usr/local/bin/llvm-objdump
-          sudo ln -sf "$(command -v llvm-strip-22)" /usr/local/bin/llvm-strip
+          set -e
+
+          for tool in clang ld.lld llvm-ar llvm-nm \
+                      llvm-objcopy llvm-objdump llvm-strip; do
+            target="$(command -v "${tool}-22")"
+            sudo ln -sf "$target" "/usr/local/bin/$tool"
+          done
 
           ld.lld --version
           clang --version
-          
+
       - name: Clone AnyKernel3
         run: |
           git clone --depth=1 \
             -b bangkk \
             https://github.com/Samw662/AnyKernel3.git \
             AnyKernel3
+
+      - name: Verify KernelSU
+        run: |
+          test -f KernelSU/kernel/Kconfig
+          echo "KernelSU encontrado!"
+          git -C KernelSU rev-parse HEAD
 
       - name: Configure kernel
         run: |
